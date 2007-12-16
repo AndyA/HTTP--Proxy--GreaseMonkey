@@ -48,7 +48,7 @@ GreaseMonkey proxy issue a command something like this:
     $ gmproxy ~/.userscripts
 
 On MacOS F<net.hexten.gmproxy.plist> is created in the project home
-directory. To gmproxy as a launch item do
+directory. To add gmproxy as a launch item do
 
     $ cp net.hexten.gmproxy.plist ~/Library/LaunchAgents
     $ launchctl load ~/Library/LaunchAgents/net.hexten.gmproxy.plist
@@ -56,6 +56,11 @@ directory. To gmproxy as a launch item do
 
 Patches welcome from anyone who has equivalent instructions for other
 platforms.
+
+=head2 Limitations
+
+Currently none of the GM_* functions are supported. If anyone has a good
+idea about how to support them please drop me a line.
 
 =head1 INTERFACE 
 

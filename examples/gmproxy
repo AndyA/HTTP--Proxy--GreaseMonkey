@@ -5,7 +5,7 @@ use warnings;
 use App::GreaseMonkeyProxy;
 
 my $app = App::GreaseMonkeyProxy->new;
-$app->parse_args(@ARGV);
+$app->parse_args( @ARGV );
 $app->run;
 
 =head1 NAME

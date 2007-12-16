@@ -310,11 +310,6 @@ L<http://rt.cpan.org>.
 
 Andy Armstrong  C<< <andy@hexten.net> >>
 
-Original Perfect Paper Passwords implementation by Steve Gibson. More details
-here:
-
-    http://www.grc.com/ppp.htm
-
 =head1 LICENCE AND COPYRIGHT
 
 Copyright (c) 2007, Andy Armstrong C<< <andy@hexten.net> >>.
