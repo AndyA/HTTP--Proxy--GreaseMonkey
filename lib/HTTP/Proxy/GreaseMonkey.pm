@@ -2,10 +2,14 @@ package HTTP::Proxy::GreaseMonkey;
 
 use warnings;
 use strict;
+use Carp;
+use HTTP::Proxy::GreaseMonkey::Script;
+
+use base qw( HTTP::Proxy::BodyFilter );
 
 =head1 NAME
 
-HTTP::Proxy::GreaseMonkey - [One line description of module's purpose here]
+HTTP::Proxy::GreaseMonkey - Run GreaseMonkey scripts in any browser
 
 =head1 VERSION
 
@@ -17,15 +21,106 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
+    use HTTP::Proxy;
     use HTTP::Proxy::GreaseMonkey;
+
+    my $proxy = HTTP::Proxy->new( port => 8030 );
+    my $gm = HTTP::Proxy::GreaseMonkey->new;
+    $gm->add_script( 'gm/myscript.js' );
+    $proxy->push_filter(
+        mime     => 'text/html',
+        response => $gm
+    );
+    $proxy->start;
   
 =head1 DESCRIPTION
 
 =head1 INTERFACE 
 
-=head2 C<< somfunc >>
+=head2 C<< add_script( $script ) >>
+
+Add a GM script to the proxy. The argument may be the filename of a
+script or an existing L<HTTP::Proxy::GreaseMonkey::Script>.
 
 =cut
+
+sub add_script {
+    my ( $self, $script ) = @_;
+
+    $script = HTTP::Proxy::GreaseMonkey::Script->new( $script )
+      unless eval { $script->can( 'script' ) };
+
+    push @{ $self->{script} }, $script;
+}
+
+=head2 C<< will_modify >>
+
+Will this filter modify content? Called by L<HTTP::Proxy>.
+
+=cut
+
+sub will_modify { scalar @{ shift->{to_run} } }
+
+=head2 C<< begin >>
+
+Called at the start of processing.
+
+=cut
+
+sub begin {
+    my ( $self, $message ) = @_;
+
+    my $uri = $message->request->uri;
+    print "$uri\n";
+
+    $self->{to_run} = [];
+    for my $script ( @{ $self->{script} } ) {
+        if ( $script->match_uri( $uri ) ) {
+            # Wrap each script in an anon function to give it a
+            # private scope.
+            push @{ $self->{to_run} },
+              '( function() { ' . $script->script . ' } )()';
+        }
+    }
+}
+
+=head2 C<< filter >>
+
+The filter entry point. Called for each chunk of input.
+
+=cut
+
+sub filter {
+    my ( $self, $dataref, $message, $protocol, $buffer ) = @_;
+
+    if ( $self->will_modify ) {
+        if ( defined $buffer ) {
+            $$buffer  = $$dataref;
+            $$dataref = "";
+        }
+        else {
+            my $insert
+              = "<script>\n//<![CDATA[\n"
+              . join( "\n", @{ $self->{to_run} } )
+              . "\n//]]>\n</script>\n";
+
+            # TODO: Fragile - needs a fairly normal looking </body>
+            $$dataref =~ s{</body>}{$insert</body>}ig;
+        }
+    }
+}
+
+=head2 C<< end >>
+
+Finished processing.
+
+=cut
+
+sub end {
+    my $self = shift;
+
+    $self->{to_run} = [];
+}
 
 1;
 __END__

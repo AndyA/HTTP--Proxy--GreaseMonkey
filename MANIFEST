@@ -1,9 +1,13 @@
-Build.PL
 Changes
-MANIFEST
-Makefile.PL
-README
+examples/gmproxy.pl
+gm/cpansearch.user.js
 lib/HTTP/Proxy/GreaseMonkey.pm
+lib/HTTP/Proxy/GreaseMonkey/Script.pm
+lib/HTTP/Proxy/GreaseMonkey/ScriptHome.pm
+Makefile.PL
+MANIFEST
+README
 t/00.load.t
+t/gmproxy.t
 t/pod-coverage.t
 t/pod.t
