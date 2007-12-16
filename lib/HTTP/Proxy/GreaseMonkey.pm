@@ -41,6 +41,22 @@ specific pages. Unfortunately GreaseMonkey only works with FireFox.
 C<HTTP::Proxy::GreaseMonkey> creates a local HTTP proxy that allows
 GreaseMonkey user scripts to be used with any browser.
 
+When you install C<HTTP::Proxy::GreaseMonkey> a program called
+C<gmproxy> is installed in your default bin directory. To launch the
+GreaseMonkey proxy issue a command something like this:
+
+    $ gmproxy ~/.userscripts
+
+On MacOS F<net.hexten.gmproxy.plist> is created in the project home
+directory. To gmproxy as a launch item do
+
+    $ cp net.hexten.gmproxy.plist ~/Library/LaunchAgents
+    $ launchctl load ~/Library/LaunchAgents/net.hexten.gmproxy.plist
+    $ launchctl start net.hexten.gmproxy
+
+Patches welcome from anyone who has equivalent instructions for other
+platforms.
+
 =head1 INTERFACE 
 
 =head2 C<< add_script( $script ) >>

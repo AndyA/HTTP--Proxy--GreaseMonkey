@@ -1,6 +1,8 @@
 Changes
 examples/cpansearch.user.js
 examples/gmproxy
+examples/net.hexten.gmproxy.plist
+helper/patchbin.PL
 lib/App/GreaseMonkeyProxy.pm
 lib/HTTP/Proxy/GreaseMonkey.pm
 lib/HTTP/Proxy/GreaseMonkey/Script.pm

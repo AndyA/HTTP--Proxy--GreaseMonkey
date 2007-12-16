@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
     	<string>%BIN_DIR%/gmproxy</string>
-    	<string>~/.userscripts</string>
+    	<string>%HOME_DIR%/.userscripts</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

@@ -28,3 +28,4 @@
 \.swp$
 
 ^greasemonkey
+^net.hexten.gmproxy.plist
