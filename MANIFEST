@@ -1,6 +1,6 @@
 Changes
+examples/cpansearch.user.js
 examples/gmproxy.pl
-gm/cpansearch.user.js
 lib/HTTP/Proxy/GreaseMonkey.pm
 lib/HTTP/Proxy/GreaseMonkey/Script.pm
 lib/HTTP/Proxy/GreaseMonkey/ScriptHome.pm

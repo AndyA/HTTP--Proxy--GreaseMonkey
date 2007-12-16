@@ -9,7 +9,7 @@ use File::Spec;
 
 my $proxy = HTTP::Proxy->new( port => 8030, start_servers => 5 );
 my $gm = HTTP::Proxy::GreaseMonkey::ScriptHome->new;
-$gm->add_dir( 'gm' );
+$gm->add_dir( 'examples' );
 $proxy->push_filter(
     mime     => 'text/html',
     response => $gm
