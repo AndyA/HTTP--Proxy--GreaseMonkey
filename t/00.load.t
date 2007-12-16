@@ -1,6 +1,7 @@
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 BEGIN {
+    use_ok( 'App::GreaseMonkeyProxy' );
     use_ok( 'HTTP::Proxy::GreaseMonkey' );
     use_ok( 'HTTP::Proxy::GreaseMonkey::Script' );
     use_ok( 'HTTP::Proxy::GreaseMonkey::ScriptHome' );

@@ -14,6 +14,7 @@ WriteMakefile(
     VERSION_FROM  => 'lib/HTTP/Proxy/GreaseMonkey.pm',
     ABSTRACT_FROM => 'lib/HTTP/Proxy/GreaseMonkey.pm',
     PL_FILES      => {},
+    EXE_FILES     => ['examples/gmproxy'],
     PREREQ_PM     => {
         'Test::More'  => 0,
         'File::Spec'  => 0,
