@@ -11,3 +11,7 @@ t/00.load.t
 t/gmproxy.t
 t/pod-coverage.t
 t/pod.t
+t/script.t
+t/scripthome.t
+t/scripts/u1.js
+t/scripts/u2.js
