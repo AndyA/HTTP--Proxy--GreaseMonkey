@@ -55,6 +55,9 @@ sub new {
         }
     }
 
+    # Special case - if include is empty make it match anything
+    $meta{include} = [qr{}] unless $meta{include};
+
     return bless {
         file   => $script_file,
         meta   => \%meta,
@@ -76,10 +79,12 @@ sub match_uri {
     for my $inc ( @{ $self->{meta}->{include} || [] } ) {
         return 1 if $uri =~ $inc;
     }
-    return 1;
+    return;
 }
 
 =head2 C<< script >>
+
+The Javascript source of this script.
 
 =cut
 
@@ -87,15 +92,43 @@ sub script { shift->{script} }
 
 =head2 C<< file >>
 
+The filename of this script.
+
 =cut
 
 sub file { shift->{file} }
 
 =head2 C<< stat >>
 
+Get the cached C<stat> array for this script.
+
 =cut
 
 sub stat { @{ shift->{stat} } }
+
+=head2 C<< name >>
+
+The descriptive name of this script
+
+=cut
+
+sub name { shift->{meta}->{name} }
+
+=head2 C<< namespace >>
+
+The namespace of this script.
+
+=cut
+
+sub namespace { shift->{meta}->{namespace} }
+
+=head2 C<< description >>
+
+The description of this script.
+
+=cut
+
+sub description { shift->{meta}->{description} }
 
 sub _gm_wildcard {
     my $wc      = shift;

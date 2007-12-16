@@ -71,7 +71,6 @@ sub begin {
     my ( $self, $message ) = @_;
 
     my $uri = $message->request->uri;
-    print "$uri\n";
 
     $self->{to_run} = [];
     for my $script ( @{ $self->{script} } ) {

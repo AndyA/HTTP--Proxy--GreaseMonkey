@@ -5,9 +5,24 @@ use HTTP::Proxy;
 use HTTP::Proxy::GreaseMonkey;
 use File::Spec;
 
-ok 1, 'is OK';
+package Fake::Message;
 
-my $proxy = HTTP::Proxy->new( port => 8030 );
+sub new { bless { uri => $_[1] }, $_[0] }
+sub request { shift }
+sub uri     { shift->{uri} }
+
+package main;
+
 my $gm = HTTP::Proxy::GreaseMonkey->new();
-$proxy->push_filter( response => $gm );
-$gm->add_script( File::Spec->catfile( 'gm', 'cpansearch.user.js' ) );
+
+for my $name ( qw( u1.js u2.js ) ) {
+    $gm->add_script( File::Spec->catfile( 't', 'scripts', $name ) );
+}
+
+my $msg = Fake::Message->new( 'http://hexten.net/index.html' );
+$gm->begin( $msg );
+
+my $body = '<html><head></head><body></body></html>';
+$gm->filter( \$body, $msg, 'http', undef );
+
+like $body, qr/Whoop.+Fnurk/s, 'whoop';
