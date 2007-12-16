@@ -16,11 +16,11 @@ App::GreaseMonkeyProxy - Command line GreaseMonkey proxy
 
 =head1 VERSION
 
-This document describes App::GreaseMonkeyProxy version 0.06
+This document describes App::GreaseMonkeyProxy version 0.01
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
@@ -43,19 +43,6 @@ our $VERSION = '0.06';
 
     BEGIN {
 
-        sub _range_spec {
-            my ( $name, $default, $min, $max ) = @_;
-            return [
-                $default,
-                sub {
-                    my ( $self, $value ) = @_;
-                    die "$name must be between $min and $max\n"
-                      if $value < $min || $value > $max;
-                    return $value;
-                  }
-            ];
-        }
-
         sub _array_spec {
             return [
                 [],
@@ -67,26 +54,12 @@ our $VERSION = '0.06';
         }
 
         %ARG_SPEC = (
-            show_man   => [0],
-            show_help  => [0],
-            args       => _array_spec(),
-            columns    => _range_spec( 'columns', 7, 1, 100 ),
-            rows       => _range_spec( 'rows', 10, 1, 100 ),
-            codelen    => [undef],
-            passphrase => [undef],
-            alphabet   => [undef],
-            key        => [
-                undef,
-                sub {
-                    my ( $self, $key ) = @_;
-                    die "Key must be 64 characters long\n"
-                      unless length( $key ) == 64;
-                    die "Key must be hexadecimal (0-9, A-F)\n"
-                      unless $key =~ /^[0-9A-F]{64}$/i;
-                    return $key;
-                },
-            ],
-            title => ['Perfect Paper Passwords'],
+            show_man  => [0],
+            show_help => [0],
+            args      => _array_spec(),
+            servers   => [5],
+            port      => [8030],
+            verbose   => [0],
         );
 
         while ( my ( $name, $spec ) = each %ARG_SPEC ) {
@@ -125,25 +98,27 @@ our $VERSION = '0.06';
 
 =head2 C<< args >>
 
-=head2 C<< alphabet >>
+=head2 C<< servers >>
 
-=head2 C<< codelen >>
+Accessor for the number of servers to start. Defaults to 5.
 
-=head2 C<< columns >>
+=head2 C<< port >>
 
-=head2 C<< rows >>
+Accessor for the port to listen on. Defaults to 8030.
 
-=head2 C<< key >>
+=head2 C<< verbose >>
 
-=head2 C<< passphrase >>
-
-=head2 C<< title >>
+Accessor for verbosity. Defaults to 0.
 
 =head2 C<< show_help >>
 
 =head2 C<< show_man >>
 
 =head2 C<< parse_args >>
+
+Parse an argument array - typically C<@ARGV>.
+
+    $app->parse_args( @ARGV );
 
 =cut
 
@@ -155,15 +130,11 @@ sub parse_args {
     my %options;
 
     GetOptions(
-        'help|?'       => \$options{show_help},
-        man            => \$options{show_man},
-        'key=s'        => \$options{key},
-        'passphrase=s' => \$options{passphrase},
-        'columns=i'    => \$options{columns},
-        'rows=i'       => \$options{rows},
-        'title=s'      => \$options{title},
-        'alphabet=s'   => \$options{alphabet},
-        'codelen=i'    => \$options{codelen},
+        'help|?'    => \$options{show_help},
+        man         => \$options{show_man},
+        'port=i'    => \$options{port},
+        'servers=i' => \$options{servers},
+        'v|verbose' => \$options{verbose},
     ) or pod2usage();
 
     while ( my ( $name, $value ) = each %options ) {
@@ -189,13 +160,19 @@ sub run {
     else {
         my @args = $self->args;
         pod2usage() unless @args;
-        my $verb = shift @args;
-        if ( my $code = $self->can( "do_$verb" ) ) {
-            $self->$code( @args );
-        }
-        else {
-            die "Unknown action: $verb\n";
-        }
+
+        my $proxy = HTTP::Proxy->new(
+            port          => $self->port,
+            start_servers => $self->servers
+        );
+        my $gm = HTTP::Proxy::GreaseMonkey::ScriptHome->new;
+        $gm->verbose( $self->verbose );
+        $gm->add_dir( map glob, @args );
+        $proxy->push_filter(
+            mime     => 'text/html',
+            response => $gm
+        );
+        $proxy->start;
     }
 }
 

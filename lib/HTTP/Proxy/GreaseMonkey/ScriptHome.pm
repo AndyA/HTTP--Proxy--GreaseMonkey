@@ -73,7 +73,7 @@ sub _reload {
             # Delete orphan
             shift @current;
         }
-        
+
         if ( @current && $f eq $current[0]->file ) {
             # Match: updated?
             my $cur   = shift @current;
@@ -82,11 +82,13 @@ sub _reload {
             # If the script file hasn't changed recycle the current
             # script object else replace it with a new one.
             $self->add_script( $nstat[9] > $ostat[9] ? $f : $cur );
-
+            print "Reloading $f\n"
+              if $self->verbose && $nstat[9] > $ostat[9];
         }
         else {
             # New script
             $self->add_script( $f );
+            print "Loading $f\n" if $self->verbose;
         }
     }
 }

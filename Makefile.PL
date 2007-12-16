@@ -13,9 +13,12 @@ WriteMakefile(
     LICENSE       => 'perl',
     VERSION_FROM  => 'lib/HTTP/Proxy/GreaseMonkey.pm',
     ABSTRACT_FROM => 'lib/HTTP/Proxy/GreaseMonkey.pm',
-    PL_FILES      => {},
-    EXE_FILES     => ['examples/gmproxy'],
-    PREREQ_PM     => {
+    # Runs twice because?
+    PL_FILES => {
+        'helper/patchbin.PL' => '$(INSTALLBIN) examples/gmproxy.plist'
+    },
+    EXE_FILES => ['examples/gmproxy'],
+    PREREQ_PM => {
         'Test::More'  => 0,
         'File::Spec'  => 0,
         'Carp'        => 0,

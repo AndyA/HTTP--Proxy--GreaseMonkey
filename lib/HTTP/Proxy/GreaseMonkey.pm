@@ -59,6 +59,18 @@ sub add_script {
     push @{ $self->{script} }, $script;
 }
 
+=head2 C<< verbose >>
+
+Set / get verbosity.
+
+=cut
+
+sub verbose {
+    my $self = shift;
+    $self->{verbose} = shift if @_;
+    return $self->{verbose};
+}
+
 =head2 C<< will_modify >>
 
 Will this filter modify content? Called by L<HTTP::Proxy>.
@@ -78,6 +90,8 @@ sub begin {
 
     my $uri = $message->request->uri;
 
+    print "Proxying $uri\n" if $self->verbose;
+
     $self->{to_run} = [];
     for my $script ( @{ $self->{script} } ) {
         if ( $script->match_uri( $uri ) ) {
@@ -85,6 +99,8 @@ sub begin {
             # private scope.
             push @{ $self->{to_run} },
               '( function() { ' . $script->script . ' } )()';
+            print "  Filtering with ", $script->name, "\n"
+              if $self->verbose;
         }
     }
 }
@@ -123,7 +139,6 @@ Finished processing.
 
 sub end {
     my $self = shift;
-
     $self->{to_run} = [];
 }
 
