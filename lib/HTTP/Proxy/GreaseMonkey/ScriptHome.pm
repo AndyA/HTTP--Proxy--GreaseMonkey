@@ -25,6 +25,8 @@ our $VERSION = '0.01';
   
 =head1 DESCRIPTION
 
+Represents a directory containing a number of GreaseMonkey user scripts.
+
 =head1 INTERFACE 
 
 =head2 C<< add_dir >>
@@ -71,6 +73,7 @@ sub _reload {
             # Delete orphan
             shift @current;
         }
+        
         if ( @current && $f eq $current[0]->file ) {
             # Match: updated?
             my $cur   = shift @current;
@@ -94,7 +97,7 @@ sub _walk {
     find(
         {
             wanted => sub {
-                push @files, $_ if -f && /[.]js/i;
+                push @files, $_ if -f && /[.]js$/i;
             },
             no_chdir => 1,
         },

@@ -4,6 +4,8 @@ use ExtUtils::MakeMaker;
 
 eval 'use ExtUtils::MakeMaker::Coverage';
 
+require 5.008;
+
 WriteMakefile(
     ( MM->can( 'signature_target' ) ? ( SIGN => 1 ) : () ),
     NAME          => 'HTTP::Proxy::GreaseMonkey',
@@ -14,6 +16,8 @@ WriteMakefile(
     PL_FILES      => {},
     PREREQ_PM     => {
         'Test::More'  => 0,
+        'File::Spec'  => 0,
+        'Carp'        => 0,
         'HTTP::Proxy' => '0.20',
     },
     dist => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

@@ -22,6 +22,8 @@ our $VERSION = '0.01';
   
 =head1 DESCRIPTION
 
+Represents a single GreaseMonkey user script.
+
 =head1 INTERFACE 
 
 =head2 C<< new >>

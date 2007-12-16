@@ -35,6 +35,12 @@ our $VERSION = '0.01';
   
 =head1 DESCRIPTION
 
+GreaseMonkey allows arbitrary user defined Javascript to be run against
+specific pages. Unfortunately GreaseMonkey only works with FireFox.
+
+C<HTTP::Proxy::GreaseMonkey> creates a local HTTP proxy that allows
+GreaseMonkey user scripts to be used with any browser.
+
 =head1 INTERFACE 
 
 =head2 C<< add_script( $script ) >>
