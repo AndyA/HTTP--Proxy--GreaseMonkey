@@ -16,7 +16,6 @@ var new_links = {
     }
 };
 
-
 function canonical_url() {
     var permalink = document.getElementById('permalink');
     if (permalink) {

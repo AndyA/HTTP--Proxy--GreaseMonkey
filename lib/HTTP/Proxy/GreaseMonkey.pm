@@ -47,6 +47,10 @@ GreaseMonkey proxy issue a command something like this:
 
     $ gmproxy ~/.userscripts
 
+By default the proxy will listen on port 8030. The supplied directory is
+scanned before each request; any scripts that have been updated or added
+will be reloaded and any that have been deleted will be discarded.
+
 On MacOS F<net.hexten.gmproxy.plist> is created in the project home
 directory. To add gmproxy as a launch item do
 
@@ -168,7 +172,8 @@ __END__
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
-HTTP::Proxy::GreaseMonkey requires no configuration files or environment variables.
+HTTP::Proxy::GreaseMonkey requires no configuration files or environment
+variables.
 
 =head1 DEPENDENCIES
 
