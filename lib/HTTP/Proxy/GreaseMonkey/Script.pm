@@ -10,11 +10,11 @@ HTTP::Proxy::GreaseMonkey::Script - A GreaseMonkey script.
 
 =head1 VERSION
 
-This document describes HTTP::Proxy::GreaseMonkey::Script version 0.02
+This document describes HTTP::Proxy::GreaseMonkey::Script version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
