@@ -27,7 +27,7 @@ my %ARGS = (
 
 if ( $^O eq 'darwin' ) {
     $ARGS{PL_FILES} = { 'helper/patchbin.PL' =>
-          '$(INSTALLBIN) examples/net.hexten.gmproxy.plist' };
+          '$(INSTALLSITEBIN) examples/net.hexten.gmproxy.plist' };
 }
 
 WriteMakefile( %ARGS );
