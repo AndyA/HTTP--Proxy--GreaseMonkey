@@ -13,12 +13,13 @@ my %ARGS = (
     LICENSE       => 'perl',
     VERSION_FROM  => 'lib/HTTP/Proxy/GreaseMonkey.pm',
     ABSTRACT_FROM => 'lib/HTTP/Proxy/GreaseMonkey.pm',
-    PL_FILES  => {},
-    EXE_FILES => ['examples/gmproxy'],
-    PREREQ_PM => {
+    PL_FILES      => {},
+    EXE_FILES     => ['examples/gmproxy'],
+    PREREQ_PM     => {
         'Test::More'  => 0,
         'File::Spec'  => 0,
         'Carp'        => 0,
+        'HTML::Tiny'  => 0,
         'HTTP::Proxy' => '0.20',
     },
     dist => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

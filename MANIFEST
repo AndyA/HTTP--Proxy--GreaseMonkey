@@ -5,6 +5,7 @@ examples/net.hexten.gmproxy.plist
 helper/patchbin.PL
 lib/App/GreaseMonkeyProxy.pm
 lib/HTTP/Proxy/GreaseMonkey.pm
+lib/HTTP/Proxy/GreaseMonkey/Redirector.pm
 lib/HTTP/Proxy/GreaseMonkey/Script.pm
 lib/HTTP/Proxy/GreaseMonkey/ScriptHome.pm
 Makefile.PL

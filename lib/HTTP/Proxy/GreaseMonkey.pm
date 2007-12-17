@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use Carp;
 use HTTP::Proxy::GreaseMonkey::Script;
+use HTML::Tiny;
 
 use base qw( HTTP::Proxy::BodyFilter );
 
@@ -42,7 +43,7 @@ C<HTTP::Proxy::GreaseMonkey> creates a local HTTP proxy that allows
 GreaseMonkey user scripts to be used with any browser.
 
 When you install C<HTTP::Proxy::GreaseMonkey> a program called
-C<gmproxy> is installed in your default bin directory. To launch the
+F<gmproxy> is installed in your default bin directory. To launch the
 GreaseMonkey proxy issue a command something like this:
 
     $ gmproxy ~/.userscripts
@@ -51,12 +52,27 @@ By default the proxy will listen on port 8030. The supplied directory is
 scanned before each request; any scripts that have been updated or added
 will be reloaded and any that have been deleted will be discarded.
 
+=head2 Mac OS
+
 On MacOS F<net.hexten.gmproxy.plist> is created in the project home
-directory. To add gmproxy as a launch item do
+directory. Create a directory called F<~/.userscripts> and then add gmproxy
+as a launch item:
 
     $ cp net.hexten.gmproxy.plist ~/Library/LaunchAgents
     $ launchctl load ~/Library/LaunchAgents/net.hexten.gmproxy.plist
     $ launchctl start net.hexten.gmproxy
+
+Then change your network settings to route HTTP through proxy
+localhost:8030. Once this is done F<gmproxy> will load automatically
+when you log in.
+
+Important: As of 2007-12-17 PubSubAgent crashes periodically (actually
+during .mac synchronisation) when HTTP is proxied. The solution appears
+to be to add *.mac.com to the list of domains that bypass the proxy. As
+far as I'm aware this is a Mac OS problem that has nothing specifically
+to do with HTTP::Proxy::GreaseMonkey.
+
+=head2 Other Platforms
 
 Patches welcome from anyone who has equivalent instructions for other
 platforms.
@@ -113,7 +129,7 @@ Called at the start of processing.
 sub begin {
     my ( $self, $message ) = @_;
 
-    my $uri = $message->request->uri;
+    my $uri = $self->{uri} = $message->request->uri;
 
     print "Proxying $uri\n" if $self->verbose;
 
@@ -123,11 +139,16 @@ sub begin {
             # Wrap each script in an anon function to give it a
             # private scope.
             push @{ $self->{to_run} },
-              '( function() { ' . $script->script . ' } )()';
+              $self->_js_scope( $script->script );
             print "  Filtering with ", $script->name, "\n"
               if $self->verbose;
         }
     }
+}
+
+sub _js_scope {
+    my $self = shift;
+    return join "\n", '( function() {', @_, '} )()';
 }
 
 =head2 C<< filter >>
@@ -145,9 +166,9 @@ sub filter {
             $$dataref = "";
         }
         else {
-            my $insert
-              = "<script>\n//<![CDATA[\n"
-              . join( "\n", @{ $self->{to_run} } )
+            my $insert = "<script>\n//<![CDATA[\n"
+              . $self->_js_scope( $self->get_gm_globals,
+                $self->get_support_script, @{ $self->{to_run} } )
               . "\n//]]>\n</script>\n";
 
             # TODO: Fragile - needs a fairly normal looking </body>
@@ -167,8 +188,51 @@ sub end {
     $self->{to_run} = [];
 }
 
+=head2 C<< get_passthru_key >>
+
+Get the passthru key that is used to signal to the proxy that it should
+rewrite request URLs.
+
+=cut
+
+sub get_passthru_key {
+    my $self = shift;
+    return $self->{_key} ||= '1234567';
+}
+
+=head2 C<< get_gm_globals >>
+
+Return a block of Javascript that initialises various globals that are
+required by the GreaseMonkey environment.
+
+=cut
+
+sub get_gm_globals {
+    my $self = shift;
+    my $h = $self->{_html} ||= HTML::Tiny->new;
+    return 'var GM__global = '
+      . $h->json_encode(
+        {
+            uri      => $self->{uri},
+            passthru => $self->get_passthru_key
+        }
+      ) . ";\n";
+}
+
+=head2 C<< get_support_script >>
+
+Returns a block of Javascript that is injected before any user scripts.
+Typically this code provides the GM_* support functions.
+
+=cut
+
+sub get_support_script {
+    my $self = shift;
+
+    return $self->{_support_js} ||= do { local $/; <DATA> };
+}
+
 1;
-__END__
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -201,3 +265,12 @@ Copyright (c) 2007, Andy Armstrong C<< <andy@hexten.net> >>.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
+
+=cut
+
+__DATA__
+// GM Support script
+
+function GM_xmlhttpRequest(details) {
+    
+}
