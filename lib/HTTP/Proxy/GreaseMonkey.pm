@@ -15,11 +15,11 @@ HTTP::Proxy::GreaseMonkey - Run GreaseMonkey scripts in any browser
 
 =head1 VERSION
 
-This document describes HTTP::Proxy::GreaseMonkey version 0.03
+This document describes HTTP::Proxy::GreaseMonkey version 0.04
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
