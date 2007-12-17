@@ -20,6 +20,7 @@ my %ARGS = (
         'File::Spec'  => 0,
         'Carp'        => 0,
         'HTML::Tiny'  => 0,
+        'Data::UUID'  => 0,
         'HTTP::Proxy' => '0.20',
     },
     dist => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

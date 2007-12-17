@@ -5,6 +5,7 @@ use strict;
 use Carp;
 use HTTP::Proxy::GreaseMonkey::Script;
 use HTML::Tiny;
+use Data::UUID;
 
 use base qw( HTTP::Proxy::BodyFilter );
 
@@ -83,6 +84,18 @@ Currently none of the GM_* functions are supported. If anyone has a good
 idea about how to support them please drop me a line.
 
 =head1 INTERFACE 
+
+=head2 C<< init >>
+
+Called to initialise the filter.
+
+=cut
+
+sub init {
+    my $self = shift;
+    # Bodge: Do this now because it seems to fail after forking.
+    $self->get_support_script;
+}
 
 =head2 C<< add_script( $script ) >>
 
@@ -197,7 +210,7 @@ rewrite request URLs.
 
 sub get_passthru_key {
     my $self = shift;
-    return $self->{_key} ||= '1234567';
+    return $self->{_key} ||= Data::UUID->new->create_str;
 }
 
 =head2 C<< get_gm_globals >>
@@ -213,7 +226,7 @@ sub get_gm_globals {
     return 'var GM__global = '
       . $h->json_encode(
         {
-            uri      => $self->{uri},
+            host     => $self->{uri}->host,
             passthru => $self->get_passthru_key
         }
       ) . ";\n";
@@ -271,6 +284,85 @@ modify it under the same terms as Perl itself. See L<perlartistic>.
 __DATA__
 // GM Support script
 
-function GM_xmlhttpRequest(details) {
+function GM__cook_url(url) {
+    return url.replace( /^(\w+:\/\/)/, 
+        '$1' + GM__global.host + '/' + GM__global.passthru + '/' );
+}
+
+function GM__get_request_obj() {
+	var req = null;
+    if ( window.XMLHttpRequest && !window.ActiveXObject ) {
+    	try {
+			req = new XMLHttpRequest();
+        } catch(e) {
+            req = null;
+        }
+    } else if(window.ActiveXObject) {
+       	try {
+        	req = new ActiveXObject("Msxml2.XMLHTTP");
+      	} catch(e) {
+        	try {
+          		req = new ActiveXObject("Microsoft.XMLHTTP");
+        	} catch(e) {
+          		req = null;
+        	}
+		}
+    }
     
+    return req;
+}
+
+function GM_xmlhttpRequest(details) {
+    var req = GM__get_request_obj();
+
+    if ( ! req ) { throw "Can't get XMLHttpRequest object" }
+
+    // URL - cooked to pass through proxy
+    var url = details.url;
+    if ( ! url ) { throw "Missing arg: url" }
+    url = GM__cook_url(url);
+
+    // Setup the headers
+    var headers = details.headers;
+    if ( headers ) {
+        for ( var h in headers ) {
+            req.setRequestHeader( h, headers[h] );
+        }
+    }
+
+    // Method
+    var method = details.method;
+    if ( ! method ) { method = 'GET' }
+
+    var data = details.data;
+    if ( ! data ) { data = '' }
+
+    var onload              = details.onload;
+    var onerror             = details.onerror;
+    var onreadystatechange  = details.onreadystatechange;
+
+    req.onreadystatechange = function() {
+        var spec = (req.readyState == 4) ? {
+            'status':           req.status,
+            'statusText':       req.statusText,
+            'responseHeaders':  req.getAllResponseHeaders(),
+            'responseText':     req.responseText,
+            'responseXML':      req.responseXML,
+            'readyState':       req.readyState,
+        } : {
+            'readyState':       req.readyState,
+        };
+
+        if (onreadystatechange) {
+            onreadystatechange(spec);
+        }
+
+        if (spec.readyState == 4) {
+            var handler = (spec.status == 200) ? onload : onerror;
+            if (handler) { handler(spec) }
+        }
+    }
+    
+    req.open(method, url, true);
+    req.send(data);
 }

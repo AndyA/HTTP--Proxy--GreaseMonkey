@@ -53,7 +53,12 @@ sub filter {
     my $path = $uri->path;
 
     if ( $path =~ $key ) {
-        $message->uri( $uri->scheme . '://' . $1 . $2 );
+        # Redirect
+        my $real_uri = $uri->scheme . '://' . $1 . $2;
+        if ( my $query = $uri->query ) {
+            $real_uri = join '?', $real_uri, $query;
+        }
+        $message->uri( $real_uri );
         $headers->header( host => $1 );
     }
 }

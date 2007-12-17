@@ -4,10 +4,11 @@ use Test::More tests => 1;
 use HTTP::Proxy;
 use HTTP::Proxy::GreaseMonkey;
 use File::Spec;
+use URI;
 
 package Fake::Message;
 
-sub new { bless { uri => $_[1] }, $_[0] }
+sub new { bless { uri => new URI($_[1]) }, $_[0] }
 sub request { shift }
 sub uri     { shift->{uri} }
 
