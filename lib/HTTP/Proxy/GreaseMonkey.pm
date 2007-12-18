@@ -96,6 +96,7 @@ sub init {
     my $self = shift;
     # Bodge: Do this now because it seems to fail after forking.
     $self->get_support_script;
+    $self->get_passthru_key;
 }
 
 =head2 C<< add_script( $script ) >>

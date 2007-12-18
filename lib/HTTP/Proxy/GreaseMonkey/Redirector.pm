@@ -6,7 +6,7 @@ use Carp;
 use JSON;
 use HTTP::Response;
 use HTML::Tiny;
-use YAML;
+use YAML qw( DumpFile LoadFile );
 
 use base qw( HTTP::Proxy::HeaderFilter );
 
@@ -58,6 +58,8 @@ sub filter {
     my $uri  = $message->uri;
     my $path = $uri->path;
 
+    # print "$path, $self->{internal}\n";
+
     if ( $path =~ $self->{internal} ) {
         $self->proxy->response(
             $self->_despatch_internal(
@@ -76,14 +78,52 @@ sub filter {
     }
 }
 
+=head2 C<< state_file >>
+
+Set the name of the file that will be used to store state.
+
+=cut
+
+sub state_file {
+    my $self = shift;
+    $self->{state_file} = shift if @_;
+    croak "No state_file defined" unless defined $self->{state_file};
+    return $self->{state_file};
+}
+
+sub _load_state {
+    my $file = shift->state_file;
+    return -f $file ? LoadFile( $file ) : {};
+}
+
+sub _save_state {
+    DumpFile( shift->state_file, @_ );
+}
+
 sub _despatch_internal {
     my ( $self, $headers, $message, $query ) = @_;
-    return eval {
+    my $result = eval {
         # JSON == YAML, right?
         my %handler = (
-            setValue => sub { my $args = shift; return 1; },
-            getValue => sub { my $args = shift; return 1; },
-            log      => sub {
+            setValue => sub {
+                my $args = shift;
+                my $state = $self->_load_state;
+                # use Data::Dumper;
+                # print Dumper( $state );
+                $state->{ $args->{ns} }->{ $args->{n} }
+                  ->{ $args->{a}->[0] } = $args->{a}->[1];
+                $self->_save_state( $state );
+                # use Data::Dumper;
+                # print Dumper( $state );
+                return 1;
+            },
+            getValue => sub {
+                my $args  = shift;
+                my $state = $self->_load_state;
+                return $state->{ $args->{ns} }->{ $args->{n} }
+                  ->{ $args->{a}->[0] } || $args->{a}->[1];
+            },
+            log => sub {
                 my $args = shift;
                 print join( ': ', $args->{n},
                     join( ' ', @{ $args->{a} } ) ), "\n";
@@ -113,8 +153,11 @@ sub _despatch_internal {
 
     if ( $@ ) {
         ( my $err = $@ ) =~ s/\s+/ /g;
+        print "Error: $err\n";
         return HTTP::Response->new( 500, $err );
     }
+
+    return $result;
 }
 
 1;

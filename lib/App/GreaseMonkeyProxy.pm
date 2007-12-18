@@ -168,7 +168,8 @@ sub run {
         );
         my $gm = HTTP::Proxy::GreaseMonkey::ScriptHome->new;
         $gm->verbose( $self->verbose );
-        $gm->add_dir( map glob, @args );
+        my @dirs = map glob, @args;
+        $gm->add_dir( @dirs );
         $proxy->push_filter(
             mime     => 'text/html',
             response => $gm
@@ -176,70 +177,11 @@ sub run {
         # Make the redirector
         my $redir = HTTP::Proxy::GreaseMonkey::Redirector->new;
         $redir->passthru( $gm->get_passthru_key );
+        $redir->state_file(
+            File::Spec->catfile( $dirs[0], 'state.yml' ) )
+          if @dirs;
         $proxy->push_filter( request => $redir, );
         $proxy->start;
-    }
-}
-
-=head1 ACTIONS
-
-=head2 C<< do_card >>
-
-Output a card
-
-=cut
-
-sub do_card {
-    my ( $self, @args ) = @_;
-    my $card_no = @args ? shift @args : 1;
-    die "Card numbers start at 1\n" if $card_no < 1;
-
-    my $title = $self->title;
-    my $rows  = $self->rows;
-    my $cols  = $self->columns;
-    my $ppp   = $self->_make_ppp;
-    my @passcodes
-      = $ppp->passcodes( $card_no, $rows * $cols, $self->_get_key );
-
-    my $colw   = length( $passcodes[0] );
-    my $center = sub {
-        my $str = shift;
-        my $pad = $colw - length $str;
-        return $str if $pad <= 0;
-        return ( ' ' x ( $pad / 2 ) ) . $str
-          . ( ' ' x ( ( $pad + 1 ) / 2 ) );
-    };
-
-    my $row_fmt = "%4d";
-    my @hdr     = ( ' ' x ( length sprintf( $row_fmt, 1 ) ) );
-    my $col     = 'A';
-    push @hdr, $center->( $col++ ) for ( 1 .. $cols );
-    my $hdr = join( ' ', @hdr );
-    my $rule = '=' x length $hdr;
-    print "$title [$card_no]\n$rule\n$hdr\n$rule\n";
-    for ( 1 .. $rows ) {
-        print join( ' ',
-            sprintf( $row_fmt, $_ ),
-            splice( @passcodes, 0, $cols ) ),
-          "\n";
-    }
-    print "$rule\n";
-}
-
-=head2 C<do_newkey>
-
-Create and display a new random key.
-
-=cut
-
-sub do_newkey {
-    my $self = shift;
-    if ( my $key = $self->_make_key ) {
-        print "Specified key is $key\n";
-    }
-    else {
-        print "Generated key is ",
-          $self->key( $self->_make_ppp->random_sequence ), "\n";
     }
 }
 
@@ -252,39 +194,6 @@ Output help page
 sub do_help {
     my $self = shift;
     pod2usage( -verbose => 1 );
-}
-
-sub _make_key {
-    my $self = shift;
-
-    if ( defined( my $key = $self->key ) ) {
-        return $key;
-    }
-    elsif ( defined( my $phrase = $self->passphrase ) ) {
-        return $self->key(
-            $self->_make_ppp->sequence_from_key( $phrase ) );
-    }
-    else {
-        return;
-    }
-}
-
-sub _get_key {
-    my $self = shift;
-    return $self->_make_key
-      || die "Must supply --key or --passphrase\n";
-}
-
-sub _make_ppp {
-    my $self = shift;
-    my %args;
-    for my $a ( qw( alphabet codelen ) ) {
-        if ( defined( my $value = $self->$a() ) ) {
-            $args{$a} = $value;
-        }
-    }
-
-    return $self->{_ppp} ||= Crypt::PerfectPaperPasswords->new( %args );
 }
 
 1;
