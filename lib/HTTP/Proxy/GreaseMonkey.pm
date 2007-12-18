@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Carp;
 use HTTP::Proxy::GreaseMonkey::Script;
-use HTML::Tiny;
+use JSON;
 use Data::UUID;
 
 use base qw( HTTP::Proxy::BodyFilter );
@@ -80,8 +80,9 @@ platforms.
 
 =head2 Limitations
 
-Currently none of the GM_* functions are supported. If anyone has a good
-idea about how to support them please drop me a line.
+Currently the only GM_* utility function that's implemented is
+C<GM_xmlhttpRequest>. To use C<GM_xmlhttpRequest> you must add the
+L<HTTP::Proxy::GreaseMonkey::Redirector> filter to the L<HTTP::Proxy>.
 
 =head1 INTERFACE 
 
@@ -152,7 +153,7 @@ sub begin {
             # Wrap each script in an anon function to give it a
             # private scope.
             push @{ $self->{to_run} },
-              $self->_js_scope( $script->script );
+              $self->_js_scope( $script->support, $script->script );
             print "  Filtering with ", $script->name, "\n"
               if $self->verbose;
         }
@@ -319,7 +320,7 @@ function GM_xmlhttpRequest(details) {
 
     // URL - cooked to pass through proxy
     var url = details.url;
-    if ( ! url ) { throw "Missing arg: url" }
+    if ( url == undefined ) { throw "Missing arg: url" }
     url = GM__cook_url(url);
 
     // Setup the headers
@@ -332,10 +333,13 @@ function GM_xmlhttpRequest(details) {
 
     // Method
     var method = details.method;
-    if ( ! method ) { method = 'GET' }
+    if ( method == undefined ) { method = 'GET' }
 
     var data = details.data;
-    if ( ! data ) { data = '' }
+    if ( data == undefined ) { data = '' }
+    
+    var async = details.async;
+    if ( async == undefined ) { async = true }
 
     var onload              = details.onload;
     var onerror             = details.onerror;
@@ -348,9 +352,14 @@ function GM_xmlhttpRequest(details) {
             'responseHeaders':  req.getAllResponseHeaders(),
             'responseText':     req.responseText,
             'responseXML':      req.responseXML,
-            'readyState':       req.readyState,
+            'readyState':       req.readyState
         } : {
-            'readyState':       req.readyState,
+            'status':           0,
+            'statusText':       '',
+            'responseHeaders':  null,
+            'responseText':     '',
+            'responseXML':      null,
+            'readyState':       req.readyState
         };
 
         if (onreadystatechange) {
@@ -363,6 +372,92 @@ function GM_xmlhttpRequest(details) {
         }
     }
     
-    req.open(method, url, true);
+    req.open(method, url, async);
     req.send(data);
+}
+
+// From http://www.JSON.org/json2.js
+function GM__jsonEncode(value) {
+    var m = {    // table of character substitutions
+        '\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f',
+        '\r': '\\r', '"' : '\\"', '\\': '\\\\' 
+    };
+
+    var a, i, k, l, v;
+    var r = /["\\\x00-\x1f\x7f-\x9f]/g;
+
+    switch (typeof value) {
+    case 'string':
+        return r.test(value) ?
+            '"' + value.replace(r, function(a) {
+                var c = m[a];
+                if (c) { return c }
+                c = a.charCodeAt();
+                return '\\u00' + Math.floor(c / 16).toString(16) +
+                                           (c % 16).toString(16);
+            }) + '"' :
+            '"' + value + '"';
+
+    case 'number':
+        return isFinite(value) ? String(value) : 'null';
+
+    case 'boolean':
+    case 'null':
+        return String(value);
+
+    case 'object':
+        if (!value) {
+            return 'null';
+        }
+
+        if (typeof value.toJSON === 'function') {
+            return GM__jsonEncode(value.toJSON());
+        }
+
+        a = [];
+        if (typeof value.length === 'number' &&
+                !(value.propertyIsEnumerable('length'))) {
+            l = value.length;
+            for (i = 0; i < l; i += 1) {
+                a.push(GM__jsonEncode(value[i]) || 'null');
+            }
+
+            return '[' + a.join(',') + ']';
+        }
+
+        for (k in value) {
+            if (typeof k === 'string') {
+                v = GM__jsonEncode(value[k]);
+                if (v) {
+                    a.push(GM__jsonEncode(k) + ':' + v);
+                }
+            }
+        }
+
+        return '{' + a.join(',') + '}';
+    }
+}
+
+function GM__proxyFunction(method, namespace, name, args) {
+    var url = 'http://$internal$?' + GM__jsonEncode({
+        m: method,
+        ns: namespace,
+        n: name,
+        a: args
+    });
+
+    var result = null;
+
+    GM_xmlhttpRequest({
+        url: url,
+        async: false,
+        onload: function(spec) {
+            result = eval(spec.responseText);
+        },
+        onerror: function(spec) {
+            throw spec.statusText;
+        },
+    });
+    
+    return result;
 }

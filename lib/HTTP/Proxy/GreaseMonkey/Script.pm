@@ -3,6 +3,7 @@ package HTTP::Proxy::GreaseMonkey::Script;
 use strict;
 use warnings;
 use Carp;
+use HTML::Tiny;
 
 =head1 NAME
 
@@ -91,6 +92,25 @@ The Javascript source of this script.
 =cut
 
 sub script { shift->{script} }
+
+=head2 C<< support >>
+
+The Javascript support code for this script
+
+=cut
+
+sub support {
+    my $self = shift;
+    my $h = $self->{_html} ||= HTML::Tiny->new;
+    my @args
+      = map { $h->json_encode( $_ ) } ( $self->namespace, $self->name );
+
+    return join "\n", map {
+            "function GM_$_() { return GM__proxyFunction("
+          . join( ', ', $h->json_encode( $_ ), @args )
+          . ", arguments) }"
+    } qw( setValue getValue log );
+}
 
 =head2 C<< file >>
 

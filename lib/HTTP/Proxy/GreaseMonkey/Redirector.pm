@@ -3,6 +3,10 @@ package HTTP::Proxy::GreaseMonkey::Redirector;
 use warnings;
 use strict;
 use Carp;
+use JSON;
+use HTTP::Response;
+use HTML::Tiny;
+use YAML;
 
 use base qw( HTTP::Proxy::HeaderFilter );
 
@@ -33,9 +37,11 @@ Set the passthru key.
 sub passthru {
     my $self = shift;
     my $key  = quotemeta shift;
-    $self->{key} = qr{^/ $key 
-                     / ( [-a-z0-9]+ (?: \. [-a-z0-9]+ )+ ) 
-                     (/.*) $}xi;
+    $self->{passthru} = qr{ ^/ $key 
+                 / ( [-a-z0-9]+ (?: \. [-a-z0-9]+ )+ ) 
+                 (/.*) $}xi;
+    $self->{internal} = qr{ ^/ $key 
+                 / \$ internal \$ $ }xi;
 }
 
 =head2 C<< filter >>
@@ -47,12 +53,19 @@ Filter the request headers.
 sub filter {
     my ( $self, $headers, $message ) = @_;
 
-    my $key = $self->{key} || return;
+    my $passthru = $self->{passthru} || return;
 
     my $uri  = $message->uri;
     my $path = $uri->path;
 
-    if ( $path =~ $key ) {
+    if ( $path =~ $self->{internal} ) {
+        $self->proxy->response(
+            $self->_despatch_internal(
+                $headers, $message, $uri->query
+            )
+        );
+    }
+    elsif ( $path =~ $passthru ) {
         # Redirect
         my $real_uri = $uri->scheme . '://' . $1 . $2;
         if ( my $query = $uri->query ) {
@@ -60,6 +73,47 @@ sub filter {
         }
         $message->uri( $real_uri );
         $headers->header( host => $1 );
+    }
+}
+
+sub _despatch_internal {
+    my ( $self, $headers, $message, $query ) = @_;
+    return eval {
+        # JSON == YAML, right?
+        my %handler = (
+            setValue => sub { my $args = shift; return 1; },
+            getValue => sub { my $args = shift; return 1; },
+            log      => sub {
+                my $args = shift;
+                print join( ': ', $args->{n},
+                    join( ' ', @{ $args->{a} } ) ), "\n";
+                return 1;
+            },
+        );
+
+        my $h    = $self->{_html} ||= HTML::Tiny->new;
+        my $qs   = $h->url_decode( $query );
+        my $args = jsonToObj( $qs );
+        # use Data::Dumper;
+        # print Dumper( $args );
+
+        my $method = delete $args->{m}
+          || die "Missing 'm' arg";
+        my $code = $handler{$method}
+          || die "No method $method";
+
+        my $result = $code->( $args );
+
+        return HTTP::Response->new(
+            200, 'OK',
+            [ 'content_type' => 'application/json' ],
+            $h->json_encode( $result )
+        );
+    };
+
+    if ( $@ ) {
+        ( my $err = $@ ) =~ s/\s+/ /g;
+        return HTTP::Response->new( 500, $err );
     }
 }
 
