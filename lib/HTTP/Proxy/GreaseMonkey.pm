@@ -78,26 +78,64 @@ to do with HTTP::Proxy::GreaseMonkey.
 Patches welcome from anyone who has equivalent instructions for other
 platforms.
 
-=head2 Limitations
+=head2 Compatibility
 
-Currently the only GM_* utility function that's implemented is
-C<GM_xmlhttpRequest>. To use C<GM_xmlhttpRequest> you must add the
-L<HTTP::Proxy::GreaseMonkey::Redirector> filter to the L<HTTP::Proxy>.
+For maximum GreaseMonkey compatibility this module must be used in
+conjunction with L<HTTP::Proxy::GreaseMonkey::Redirector> which provides
+compatibility services within the proxy. The easiest way to achieve this
+is to use the C<gmproxy> command line program. If you're rolling your
+own proxy use something like this to install the necessary filters:
+
+    my $proxy = HTTP::Proxy->new(
+        port          => $self->port,
+        start_servers => $self->servers
+    );
+    my $gm = HTTP::Proxy::GreaseMonkey::ScriptHome->new;
+    $gm->verbose( $self->verbose );
+    my @dirs = map glob, @args;
+    $gm->add_dir( @dirs );
+    $proxy->push_filter(
+        mime     => 'text/html',
+        response => $gm
+    );
+    # Make the redirector
+    my $redir = HTTP::Proxy::GreaseMonkey::Redirector->new;
+    $redir->passthru( $gm->get_passthru_key );
+    $redir->state_file(
+        File::Spec->catfile( $dirs[0], 'state.yml' ) )
+      if @dirs;
+    $proxy->push_filter( request => $redir, );
+    $proxy->start;
+
+=head3 Supported Functions
+
+The C<GM_registerMenuCommand> function is not supported; it makes no
+sense in a proxied environment.
+
+C<GM_setValue> and C<GM_getValue> operate on a YAML encoded state file
+which, by default, is stored in the first named user scripts directory.
+
+C<GM_log> outputs log messages to any TTY that the proxy is attached to.
+Log output does not appear in the browser.
+
+C<GM_xmlhttpRequest> forwards requests via the proxy to bypass the
+browser's cross site scripting policy.
+
+=head3 Performance
+
+C<GM_setValue>, C<GM_getValue> and C<GM_log> talk to the proxy using
+synchronous JSONRPC - so they're a little slow. It remains to be seen
+whether this is a problem for typical GreaseMonkey scripts.
+
+=head2 Security
+
+I believe it would be possible for a specially crafted page that was
+aware of this implementation to access the C<GM_xmlhttpRequest> backdoor
+and make cross-site HTTP requests.
+
+I'll attempt to plug that security hole in a future release.
 
 =head1 INTERFACE 
-
-=head2 C<< init >>
-
-Called to initialise the filter.
-
-=cut
-
-sub init {
-    my $self = shift;
-    # Bodge: Do this now because it seems to fail after forking.
-    $self->get_support_script;
-    $self->get_passthru_key;
-}
 
 =head2 C<< add_script( $script ) >>
 
@@ -125,6 +163,63 @@ sub verbose {
     my $self = shift;
     $self->{verbose} = shift if @_;
     return $self->{verbose};
+}
+
+=head2 C<< get_passthru_key >>
+
+Get the passthru key that is used to signal to the proxy that it should
+rewrite request URLs.
+
+=cut
+
+sub get_passthru_key {
+    my $self = shift;
+    return $self->{_key} ||= Data::UUID->new->create_str;
+}
+
+=head2 C<< get_gm_globals >>
+
+Return a block of Javascript that initialises various globals that are
+required by the GreaseMonkey environment.
+
+=cut
+
+sub get_gm_globals {
+    my $self = shift;
+    my $h = $self->{_html} ||= HTML::Tiny->new;
+    return 'var GM__global = '
+      . $h->json_encode(
+        {
+            host     => $self->{uri}->host,
+            passthru => $self->get_passthru_key
+        }
+      ) . ";\n";
+}
+
+=head2 C<< get_support_script >>
+
+Returns a block of Javascript that is injected before any user scripts.
+Typically this code provides the GM_* support functions.
+
+=cut
+
+sub get_support_script {
+    my $self = shift;
+
+    return $self->{_support_js} ||= do { local $/; <DATA> };
+}
+
+=head2 C<< init >>
+
+Called to initialise the filter.
+
+=cut
+
+sub init {
+    my $self = shift;
+    # Bodge: Do this now because it seems to fail after forking.
+    $self->get_support_script;
+    $self->get_passthru_key;
 }
 
 =head2 C<< will_modify >>
@@ -201,50 +296,6 @@ Finished processing.
 sub end {
     my $self = shift;
     $self->{to_run} = [];
-}
-
-=head2 C<< get_passthru_key >>
-
-Get the passthru key that is used to signal to the proxy that it should
-rewrite request URLs.
-
-=cut
-
-sub get_passthru_key {
-    my $self = shift;
-    return $self->{_key} ||= Data::UUID->new->create_str;
-}
-
-=head2 C<< get_gm_globals >>
-
-Return a block of Javascript that initialises various globals that are
-required by the GreaseMonkey environment.
-
-=cut
-
-sub get_gm_globals {
-    my $self = shift;
-    my $h = $self->{_html} ||= HTML::Tiny->new;
-    return 'var GM__global = '
-      . $h->json_encode(
-        {
-            host     => $self->{uri}->host,
-            passthru => $self->get_passthru_key
-        }
-      ) . ";\n";
-}
-
-=head2 C<< get_support_script >>
-
-Returns a block of Javascript that is injected before any user scripts.
-Typically this code provides the GM_* support functions.
-
-=cut
-
-sub get_support_script {
-    my $self = shift;
-
-    return $self->{_support_js} ||= do { local $/; <DATA> };
 }
 
 1;
@@ -453,7 +504,7 @@ function GM__proxyFunction(method, namespace, name, args) {
         url: url,
         async: false,
         onload: function(spec) {
-            result = eval(spec.responseText);
+            result = eval(spec.responseText)[0];
         },
         onerror: function(spec) {
             throw spec.statusText;
