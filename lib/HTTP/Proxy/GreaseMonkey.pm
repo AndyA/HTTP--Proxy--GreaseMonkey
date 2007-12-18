@@ -453,7 +453,7 @@ function GM__proxyFunction(method, namespace, name, args) {
         url: url,
         async: false,
         onload: function(spec) {
-            result = eval(spec.responseText);
+            result = eval(spec.responseText)[0];
         },
         onerror: function(spec) {
             throw spec.statusText;
