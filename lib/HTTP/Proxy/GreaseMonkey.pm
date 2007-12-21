@@ -4,7 +4,6 @@ use warnings;
 use strict;
 use Carp;
 use HTTP::Proxy::GreaseMonkey::Script;
-use JSON;
 use Data::UUID;
 
 use base qw( HTTP::Proxy::BodyFilter );
