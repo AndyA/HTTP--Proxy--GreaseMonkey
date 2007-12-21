@@ -13,11 +13,11 @@ HTTP::Proxy::GreaseMonkey::ScriptHome - A directory of GreaseMonkey scripts
 
 =head1 VERSION
 
-This document describes HTTP::Proxy::GreaseMonkey::ScriptHome version 0.05
+This document describes HTTP::Proxy::GreaseMonkey::ScriptHome version 0.06
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 

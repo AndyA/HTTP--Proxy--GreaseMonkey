@@ -17,11 +17,11 @@ HTTP::Proxy::GreaseMonkey::Redirector - Proxy cross-site requests
 
 =head1 VERSION
 
-This document describes HTTP::Proxy::GreaseMonkey::Redirector version 0.05
+This document describes HTTP::Proxy::GreaseMonkey::Redirector version 0.06
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
   

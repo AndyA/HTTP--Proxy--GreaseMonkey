@@ -17,11 +17,11 @@ App::GreaseMonkeyProxy - Command line GreaseMonkey proxy
 
 =head1 VERSION
 
-This document describes App::GreaseMonkeyProxy version 0.05
+This document describes App::GreaseMonkeyProxy version 0.06
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 

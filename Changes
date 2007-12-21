@@ -13,3 +13,7 @@ Revision history for HTTP-Proxy-GreaseMonkey
 
 0.04    2007-12-18
         - Added support for GM_setValue, GM_getValue and GM_log
+
+0.05    2007-12-21
+        - Documentation tidying
+        - Added support for JSON 2.01.
