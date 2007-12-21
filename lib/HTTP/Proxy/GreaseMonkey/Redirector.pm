@@ -7,6 +7,7 @@ use JSON;
 use HTTP::Response;
 use HTML::Tiny;
 use YAML qw( DumpFile LoadFile );
+use LockFile::Simple qw( lock unlock );
 
 use base qw( HTTP::Proxy::HeaderFilter );
 
@@ -16,11 +17,11 @@ HTTP::Proxy::GreaseMonkey::Redirector - Proxy cross-site requests
 
 =head1 VERSION
 
-This document describes HTTP::Proxy::GreaseMonkey::Redirector version 0.04
+This document describes HTTP::Proxy::GreaseMonkey::Redirector version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
   
@@ -100,54 +101,64 @@ sub _save_state {
     DumpFile( shift->state_file, @_ );
 }
 
+sub _locked {
+    my ( $self, $func ) = @_;
+    my $file = $self->state_file;
+    lock( $file );
+    my @res = $func->();
+    unlock( $file );
+    return @res;
+}
+
 sub _despatch_internal {
     my ( $self, $headers, $message, $query ) = @_;
     my $result = eval {
         # JSON == YAML, right?
         my %handler = (
             setValue => sub {
-                my $args = shift;
-                my $state = $self->_load_state;
-                # use Data::Dumper;
-                # print Dumper( $state );
-                $state->{ $args->{ns} }->{ $args->{n} }
-                  ->{ $args->{a}->[0] } = $args->{a}->[1];
-                $self->_save_state( $state );
-                # use Data::Dumper;
-                # print Dumper( $state );
+                my ( $args, $name, $val ) = @_;
+                $self->_locked(
+                    sub {
+                        my $state = $self->_load_state;
+                        $state->{ $args->{ns} }->{ $args->{n} }->{$name}
+                          = $val;
+                        $self->_save_state( $state );
+                    }
+                );
                 return 1;
             },
             getValue => sub {
-                my $args  = shift;
-                my $state = $self->_load_state;
-                return $state->{ $args->{ns} }->{ $args->{n} }
-                  ->{ $args->{a}->[0] } || $args->{a}->[1];
+                my ( $args, $name, $dflt ) = @_;
+                my ( $state )
+                  = $self->_locked( sub { $self->_load_state } );
+                my $val
+                  = $state->{ $args->{ns} }->{ $args->{n} }->{$name};
+                return defined $val ? $val : $dflt;
             },
             log => sub {
-                my $args = shift;
-                print join( ': ', $args->{n},
-                    join( ' ', @{ $args->{a} } ) ), "\n";
+                my ( $args, @argv ) = @_;
+                print join( ': ', $args->{n}, join( '', @argv ) ), "\n";
                 return 1;
             },
         );
 
         my $h    = $self->{_html} ||= HTML::Tiny->new;
         my $qs   = $h->url_decode( $query );
-        my $args = jsonToObj( $qs );
-        # use Data::Dumper;
-        # print Dumper( $args );
+        my $args = from_json( $qs );
 
         my $method = delete $args->{m}
           || die "Missing 'm' arg";
         my $code = $handler{$method}
           || die "No method $method";
 
-        my $result = $code->( $args );
+        my @arguments = @{ delete $args->{a} || [] };
+
+        my $result = $code->( $args, @arguments );
 
         return HTTP::Response->new(
             200, 'OK',
             [ 'content_type' => 'application/json' ],
-            $h->json_encode( $result )
+            to_json( [$result] )
         );
     };
 

@@ -9,6 +9,11 @@ Revision history for HTTP-Proxy-GreaseMonkey
         - Patch up plist so it finds the gmproxy executable correctly
 
 0.03    2007-12-17
-        - Added support GM_xmlhttpRequest
+        - Added support for GM_xmlhttpRequest
 
-0.04    2007-12-17
+0.04    2007-12-18
+        - Added support for GM_setValue, GM_getValue and GM_log
+
+0.05    2007-12-21
+        - Documentation tidying
+        - Added support for JSON 2.01.
