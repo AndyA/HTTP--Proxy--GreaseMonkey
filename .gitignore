@@ -1,0 +1,16 @@
+*.bak
+*.plist
+*.tar.gz
+.lwpcookies
+.prove
+Build
+HTTP-Proxy-GreaseMonkey-*
+Makefile
+Makefile.old
+Session.vim
+_build*
+andy
+blib*
+cover_db
+greasemonkey
+pm_to_blib*
